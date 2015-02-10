@@ -49,7 +49,7 @@ public class MyFakebookOracle extends FakebookOracle {
 		photoTableName = prefix+dataType+"_PHOTOS";
 		tagTableName = prefix+dataType+"_TAGS";
 	}
-	
+	//top kek
 	
 	@Override
 	// ***** Query 0 *****
