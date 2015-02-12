@@ -251,7 +251,8 @@ public class MyFakebookOracle extends FakebookOracle {
 		try
 		{
 			
-			String getSql = "SELECT u.USER_ID, u.FIRST_NAME, u.LAST_NAME FROM " + userTableName + " u JOIN (SELECT h.USER1_ID, COUNT(h.USER1_ID) AS NUMFRIENDS FROM " + "(SELECT f.USER1_ID, f.USER2_ID FROM "+
+			String getSql = "SELECT u.USER_ID, u.FIRST_NAME, u.LAST_NAME FROM " + userTableName 
+					+ " u JOIN (SELECT h.USER1_ID, COUNT(h.USER1_ID) AS NUMFRIENDS FROM " + "(SELECT f.USER1_ID, f.USER2_ID FROM "+
 					friendsTableName+" f UNION ALL SELECT g.USER2_ID, g.USER1_ID FROM "+ friendsTableName + 
 					" g) h GROUP BY USER1_ID) i ON i.USER1_ID = u.USER_ID AND i.NUMFRIENDS > 80";
 					
@@ -412,6 +413,8 @@ public class MyFakebookOracle extends FakebookOracle {
 				getPhotosStmt.close();
 			if(dropView != null)
 				dropView.close();
+			if(getNamesStmt != null)
+				getNamesStmt.close();
 		}
 		
 		
@@ -453,6 +456,11 @@ public class MyFakebookOracle extends FakebookOracle {
 		mp.addSharedPhoto(new PhotoInfo(sharedPhotoId, sharedPhotoAlbumId, 
 				sharedPhotoAlbumName, sharedPhotoCaption, sharedPhotoLink));
 		this.bestMatches.add(mp);
+		
+		ResultSet rst = null; 
+		PreparedStatement get = null;
+		
+		
 	}
 
 	
@@ -496,8 +504,44 @@ public class MyFakebookOracle extends FakebookOracle {
 	// on the same day, then assume that the one with the larger user_id is older
 	//
 	public void findAgeInfo(Long user_id) throws SQLException {
+		/*
 		this.oldestFriend = new UserInfo(1L, "Oliver", "Oldham");
-		this.youngestFriend = new UserInfo(25L, "Yolanda", "Young");
+		this.youngestFriend = new UserInfo(25L, "Yolanda", "Young");*/
+		
+		ResultSet rst = null; 
+		PreparedStatement getNamesStmt = null;
+		
+		try {
+		String getNamesSql = "SELECT u.user_id, u.first_name, u.last_name FROM  " + userTableName 
+				+ " u JOIN (select DISTINCT user2_id FROM (SELECT f.USER1_ID, f.USER2_ID FROM "+
+				friendsTableName +" f UNION ALL SELECT g.USER2_ID, g.USER1_ID FROM "+ friendsTableName + " g)" + 
+				" where user1_id = ?) j ON u.user_id = j.user2_id ORDER BY u.YEAR_OF_BIRTH DESC, u.MONTH_OF_BIRTH DESC, "
+				+ "u.DAY_OF_BIRTH DESC";
+			getNamesStmt = oracleConnection.prepareStatement(getNamesSql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			getNamesStmt.setLong(1, user_id);
+			rst = getNamesStmt.executeQuery();
+			while(rst.next()){
+				if(rst.isFirst()){
+					this.youngestFriend = new UserInfo(rst.getLong(1), rst.getString(2), rst.getString(3));
+				}
+				if(rst.isLast()){
+					this.oldestFriend = new UserInfo(rst.getLong(1), rst.getString(2), rst.getString(3));
+				}
+			}
+		} 		
+		catch (SQLException e) {
+			System.err.println(e.getMessage());
+			// can do more things here
+			
+			throw e;		
+		} finally {
+			// Close statement and result set
+			if(rst != null) 
+				rst.close();
+			
+			if(getNamesStmt != null)
+				getNamesStmt.close();
+		}
 	}
 	
 	
