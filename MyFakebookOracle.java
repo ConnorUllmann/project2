@@ -622,12 +622,38 @@ public class MyFakebookOracle extends FakebookOracle {
 		
 		
 		ResultSet rst = null; 
+		PreparedStatement createViewStmt = null;
+		PreparedStatement dropViewStmt = null;
 		PreparedStatement getStmt = null;
 		try {
-			String getSQL = "SELECT a.user_id as user1_id, b.user_id AS user2_id, a.first_name, b.first_name, a.last_name FROM "+userTableName+" a, "+userTableName+" b WHERE a.last_name = b.last_name AND a.user_id <> b.user_id";
+			String i0 = 
+"SELECT a.user_id as user1_id, b.user_id AS user2_id, a.first_name as first_name1, b.first_name as first_name2, a.last_name "+
+"FROM "+userTableName+" a, "+userTableName+" b "+
+"WHERE a.last_name = b.last_name AND a.user_id < b.user_id AND ABS(a.year_of_birth - b.year_of_birth) < 10";
 			
-			getStmt = oracleConnection.prepareStatement(getSQL);
+			String i1 = 
+"SELECT s.user1_id, s.user2_id, s.first_name1, s.first_name2, s.last_name, h0.hometown_city_id as hometown1_id, h1.hometown_city_id as hometown2_id "+
+"FROM ("+i0+") s, USER_HOMETOWN_CITY h0, USER_HOMETOWN_CITY h1 "+
+"WHERE s.user1_id = h0.user_id AND s.user2_id = h1.user_id AND h0.hometown_city_id = h1.hometown_city_id";
+			
+			String createViewSQL = 
+"CREATE VIEW USER_MATCHING AS (" + i1 + ")";
+			
+			String dropViewSQL = 
+"DROP VIEW USER_MATCHING";
+			
+			String getSQL0=
+"SELECT m.user1_id, m.user2_id, m.first_name1, m.first_name2, m.last_name, m.hometown1_id, m.hometown2_id "+
+"FROM FRIENDS f, USER_MATCHING m "+
+"WHERE f.user1_id = m.user1_id AND f.user2_id = m.user2_id "+
+"ORDER BY m.user1_id, m.user2_id";
+
+			createViewStmt = oracleConnection.prepareStatement(createViewSQL);
+			createViewStmt.executeQuery();
+			getStmt = oracleConnection.prepareStatement(getSQL0);
 			rst = getStmt.executeQuery();
+			dropViewStmt = oracleConnection.prepareStatement(dropViewSQL);
+			dropViewStmt.executeQuery();
 			
 			while(rst.next()){
 				Long user1_id = rst.getLong(1);
@@ -637,6 +663,7 @@ public class MyFakebookOracle extends FakebookOracle {
 				String user2FirstName = rst.getString(4);
 				String user2LastName = rst.getString(5);
 				SiblingInfo s = new SiblingInfo(user1_id, user1FirstName, user1LastName, user2_id, user2FirstName, user2LastName);
+				//System.out.println(user1FirstName+" "+user1LastName + "="+user2FirstName+" "+user2LastName +" -> " + rst.getLong(6) + "="+rst.getLong(7));
 				this.siblings.add(s);
 			}
 			
