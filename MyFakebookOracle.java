@@ -161,15 +161,13 @@ public class MyFakebookOracle extends FakebookOracle {
 	//
 	public void findNameInfo() throws SQLException { // Query1
         // Find the following information from your database and store the information as shown
-		this.longestLastNames.add("JohnJacobJingleheimerSchmidt");
+		/*this.longestLastNames.add("JohnJacobJingleheimerSchmidt");
 		this.shortestLastNames.add("Ng");
 		this.shortestLastNames.add("Fu");
 		this.shortestLastNames.add("Wu");
 		this.mostCommonLastNames.add("Wang");
 		this.mostCommonLastNames.add("Smith");
 		this.mostCommonLastNamesCount = 10;
-<<<<<<< HEAD
-=======
 		this.mostCommonLastNamesCount = 10;*/
 		
 		ResultSet rst = null; 
@@ -214,10 +212,24 @@ public class MyFakebookOracle extends FakebookOracle {
 					this.mostCommonLastNamesCount = rst.getInt(2);
 				}
 			}
->>>>>>> 0efe6414b50930404ac0fa450efc22873c12ad97
+		} catch (SQLException e) {
+					System.err.println(e.getMessage());
+					// can do more things here
+					
+					throw e;		
+				} finally {
+					// Close statement and result set
+					if(rst != null) 
+						rst.close();
+					
+					if(getNamesStmt != null)
+						getNamesStmt.close();
+					
+					if(getCommonStmt != null)
+						getCommonStmt.close();
+				}
 
 	}
-	
 	@Override
 	// ***** Query 2 *****
 	// Find the user(s) who have strictly more than 80 friends in the network
