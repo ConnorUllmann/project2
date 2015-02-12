@@ -167,6 +167,7 @@ public class MyFakebookOracle extends FakebookOracle {
 		this.mostCommonLastNames.add("Wang");
 		this.mostCommonLastNames.add("Smith");
 		this.mostCommonLastNamesCount = 10;
+
 	}
 	
 	@Override
@@ -182,7 +183,40 @@ public class MyFakebookOracle extends FakebookOracle {
 		// Find the following information from your database and store the information as shown 
 		this.popularFriends.add(new UserInfo(10L, "Billy", "SmellsFunny"));
 		this.popularFriends.add(new UserInfo(11L, "Jenny", "BadBreath"));
-		this.countPopularFriends = 2;
+		
+
+		ResultSet rst = null; 
+		PreparedStatement getStmt = null;
+		
+		try
+		{
+			
+			String getSql = /*"SELECT f.FIRST_NAME, f.LAST_NAME, f.USER_ID, f.USER1_ID "+
+					"FROM ("+friendsTableName+" INNER JOIN "+userTableName+" ON "+friendsTableName+".USER1_ID = "+userTableName+".USER_ID) f;";*/
+					"SELECT first_name, last_name, user_id FROM " + userTableName;
+			
+			getStmt = oracleConnection.prepareStatement(getSql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			rst = getStmt.executeQuery();
+			
+			int count = 0;
+			while(rst.next()){
+				String firstName = rst.getString(1);
+				String lastName = rst.getString(2);
+				Long uid = rst.getLong(3);
+				this.popularFriends.add(new UserInfo(uid, firstName, lastName));
+				count++;
+			}
+			this.countPopularFriends = count;
+		}
+		catch (SQLException e) 
+		{
+			System.err.println(e.getMessage());
+			
+			throw e;		
+		} 
+		finally 
+		{
+		}
 	}
 	 
 
