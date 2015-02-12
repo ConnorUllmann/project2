@@ -241,8 +241,8 @@ public class MyFakebookOracle extends FakebookOracle {
 	//
 	public void popularFriends() throws SQLException {
 		// Find the following information from your database and store the information as shown 
-		this.popularFriends.add(new UserInfo(10L, "Billy", "SmellsFunny"));
-		this.popularFriends.add(new UserInfo(11L, "Jenny", "BadBreath"));
+		/*this.popularFriends.add(new UserInfo(10L, "Billy", "SmellsFunny"));
+		this.popularFriends.add(new UserInfo(11L, "Jenny", "BadBreath"));*/
 		
 
 		ResultSet rst = null; 
@@ -251,18 +251,22 @@ public class MyFakebookOracle extends FakebookOracle {
 		try
 		{
 			
-			String getSql = /*"SELECT f.FIRST_NAME, f.LAST_NAME, f.USER_ID, f.USER1_ID "+
-					"FROM ("+friendsTableName+" INNER JOIN "+userTableName+" ON "+friendsTableName+".USER1_ID = "+userTableName+".USER_ID) f;";*/
-					"SELECT first_name, last_name, user_id FROM " + userTableName;
-			
-			getStmt = oracleConnection.prepareStatement(getSql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			String getSql = "SELECT u.USER_ID, u.FIRST_NAME, u.LAST_NAME FROM " + userTableName + " u JOIN (SELECT h.USER1_ID, COUNT(h.USER1_ID) AS NUMFRIENDS FROM " + "(SELECT f.USER1_ID, f.USER2_ID FROM "+
+					friendsTableName+" f UNION ALL SELECT g.USER2_ID, g.USER1_ID FROM "+ friendsTableName + 
+					" g) h GROUP BY USER1_ID) i ON i.USER1_ID = u.USER_ID AND i.NUMFRIENDS > 80";
+					
+					/*"SELECT u.USER_ID, COUNT(u.USER_ID) AS NUMFRIENDS FROM " + userTableName + " u JOIN (SELECT f.USER1_ID, f.USER2_ID FROM "+
+					friendsTableName+" f UNION ALL SELECT g.USER1_ID, g.USER2_ID FROM "+ friendsTableName + 
+					" g) uni ON u.user_id = uni.user1_id GROUP BY USER_ID";*/
+								
+			getStmt = oracleConnection.prepareStatement(getSql);
 			rst = getStmt.executeQuery();
 			
 			int count = 0;
 			while(rst.next()){
-				String firstName = rst.getString(1);
-				String lastName = rst.getString(2);
-				Long uid = rst.getLong(3);
+				String firstName = rst.getString(2);
+				String lastName = rst.getString(3);
+				Long uid = rst.getLong(1);
 				this.popularFriends.add(new UserInfo(uid, firstName, lastName));
 				count++;
 			}
@@ -329,7 +333,7 @@ public class MyFakebookOracle extends FakebookOracle {
 	// If there are ties, choose the photo with the smaller numeric PhotoID first
 	// 
 	public void findPhotosWithMostTags(int n) throws SQLException { 
-		String photoId = "1234567";
+		/*String photoId = "1234567";
 		String albumId = "123456789";
 		String albumName = "album1";
 		String photoCaption = "caption1";
@@ -338,7 +342,79 @@ public class MyFakebookOracle extends FakebookOracle {
 		TaggedPhotoInfo tp = new TaggedPhotoInfo(p);
 		tp.addTaggedUser(new UserInfo(12345L, "taggedUserFirstName1", "taggedUserLastName1"));
 		tp.addTaggedUser(new UserInfo(12345L, "taggedUserFirstName2", "taggedUserLastName2"));
-		this.photosWithMostTags.add(tp);
+		this.photosWithMostTags.add(tp);*/
+		ResultSet rst = null; 
+		ResultSet rst2 = null; 
+		PreparedStatement dropView = null;
+		PreparedStatement getViewStmt = null;
+		PreparedStatement getPhotosStmt = null;
+		PreparedStatement getNamesStmt = null;
+		try {
+			
+			String getViewSql = "CREATE VIEW QUANT AS SELECT TAG_PHOTO_ID, TAG_SUBJECT_ID, NUMTAGS FROM" +
+					 "(SELECT j.TAG_PHOTO_ID, k.TAG_SUBJECT_ID, j.NUMTAGS FROM (SELECT t.TAG_PHOTO_ID,"
+					+ " COUNT(t.TAG_PHOTO_ID) AS NUMTAGS FROM " + 
+						tagTableName + " t JOIN " + photoTableName + " p ON t.TAG_PHOTO_ID = p.PHOTO_ID GROUP BY t.TAG_PHOTO_ID"
+					+ " ORDER BY NUMTAGS desc) j JOIN " + tagTableName + " k ON j.TAG_PHOTO_ID = k.TAG_PHOTO_ID)";
+			String getPhotosSql = "SELECT DISTINCT PHOTO_ID, ALBUM_ID, ALBUM_NAME, PHOTO_CAPTION, PHOTO_LINK FROM "
+					+ "(SELECT p.PHOTO_ID, p.ALBUM_ID, a.ALBUM_NAME, p.PHOTO_CAPTION, p.PHOTO_LINK FROM " +
+					albumTableName + " a JOIN QUANT q JOIN " +
+					photoTableName + " p ON q.TAG_PHOTO_ID = p.PHOTO_ID AND q.NUMTAGS = (SELECT MAX(NUMTAGS) FROM QUANT) "
+							+ "ON a.ALBUM_ID = p.ALBUM_ID ORDER BY q.TAG_PHOTO_ID) ORDER BY PHOTO_ID";
+			String getNamesSql = "SELECT u.USER_ID, u.FIRST_NAME, u.LAST_NAME, q.NUMTAGS FROM " + userTableName + " u JOIN"
+					+ " QUANT q ON q.TAG_SUBJECT_ID = u.USER_ID AND q.NUMTAGS = (SELECT MAX(NUMTAGS) FROM QUANT) ORDER BY q.TAG_PHOTO_ID";
+			String dropSql = "DROP VIEW QUANT"; 
+			getViewStmt = oracleConnection.prepareStatement(getViewSql);
+			getPhotosStmt = oracleConnection.prepareStatement(getPhotosSql);
+			getNamesStmt = oracleConnection.prepareStatement(getNamesSql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			dropView = oracleConnection.prepareStatement(dropSql);
+			
+			rst = getViewStmt.executeQuery();
+			rst = getPhotosStmt.executeQuery();
+			rst2 = getNamesStmt.executeQuery();
+			int w = 0;
+			while(rst.next() && w < n){
+				
+				String photoId = rst.getString(1);
+				String albumId = rst.getString(2);
+				String albumName = rst.getString(3);
+				String photoCaption = rst.getString(4);
+				String photoLink = rst.getString(5);
+					PhotoInfo p = new PhotoInfo(photoId, albumId, albumName, photoCaption, photoLink);
+					TaggedPhotoInfo tp = new TaggedPhotoInfo(p);
+					int i = 0;
+					while(rst2.next() && i < rst2.getInt(4)){
+					tp.addTaggedUser(new UserInfo(rst2.getLong(1), rst2.getString(2), rst2.getString(3)));
+						i++;
+					}
+					rst2.previous();
+					this.photosWithMostTags.add(tp);
+				w++;
+			}
+			rst = dropView.executeQuery();
+				
+			
+			
+		} 		
+		catch (SQLException e) {
+			System.err.println(e.getMessage());
+			// can do more things here
+			
+			throw e;		
+		} finally {
+			// Close statement and result set
+			if(rst != null) 
+				rst.close();
+			
+			if(getViewStmt != null)
+				getViewStmt.close();
+			if(getPhotosStmt != null)
+				getPhotosStmt.close();
+			if(dropView != null)
+				dropView.close();
+		}
+		
+		
 	}
 
 	
