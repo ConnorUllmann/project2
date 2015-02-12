@@ -432,28 +432,36 @@ public class MyFakebookOracle extends FakebookOracle {
 	// events in that city.  If there is a tie, return the names of all of the (tied) cities.
 	//
 	public void findEventCities() throws SQLException {
-		//this.eventCount = 12;
-		//this.popularCityNames.add("Ann Arbor");
-		//this.popularCityNames.add("Ypsilanti");
 		
 		ResultSet rst = null; 
-		PreparedStatement getStmt = null;
+		PreparedStatement createViewStmt = null;
+		PreparedStatement getFinalStmt = null;
+		PreparedStatement dropViewStmt = null;
 		try {
-			String getSql = //"SELECT CITY_NAME FROM (SELECT COUNT(*) FROM cityTableName AS NumberOfEvents) ORDER BY NumberOfEvents DESC 1";
-				"SELECT c.CITY_ID, COUNT(e.EVENT_CITY_ID) AS NUM_EVENTS "+
-				"FROM "+eventTableName+" e, "+cityTableName+" c "+
-				"WHERE e.EVENT_CITY_ID = c.CITY_ID "+
-				"GROUP BY c.CITY_ID "+
-				"ORDER BY NUM_EVENTS DESC";
-			getStmt = oracleConnection.prepareStatement(getSql);
-			rst = getStmt.executeQuery();
-			int count = 0;
+			String createViewSql = 
+"CREATE VIEW POPULAR_CITIES AS SELECT s.CITY_ID, s.CITY_NAME, s.NUMEVENTS "+
+"FROM (SELECT c.CITY_ID, c.CITY_NAME, COUNT(c.CITY_ID) AS NUMEVENTS "+
+	  "FROM "+cityTableName+" c, "+eventTableName+" e "+
+	  "WHERE c.CITY_ID = e.EVENT_CITY_ID "+
+	  "GROUP BY CITY_ID, CITY_NAME) s "+
+"ORDER BY 3 DESC";
+			String getFinalSql=
+"SELECT a.CITY_NAME, a.NUMEVENTS "+
+"FROM POPULAR_CITIES a "+
+"WHERE a.NUMEVENTS = (SELECT MAX(NUMEVENTS) FROM POPULAR_CITIES)";
+			String dropViewSql=
+"DROP VIEW POPULAR_CITIES";
+			
+			createViewStmt = oracleConnection.prepareStatement(createViewSql);
+			createViewStmt.executeQuery();
+			getFinalStmt = oracleConnection.prepareStatement(getFinalSql);
+			rst = getFinalStmt.executeQuery();
+			dropViewStmt = oracleConnection.prepareStatement(dropViewSql);
+			dropViewStmt.executeQuery();
 			while(rst.next()){
-				//this.eventCount = rst.getInt(1);
-				this.popularCityNames.add(rst.getInt(1)+":"+rst.getInt(2));
-				count++;
+				this.eventCount = rst.getInt(2);
+				this.popularCityNames.add(rst.getString(1));
 			}
-			this.eventCount = count;
 			
 		} 		
 		catch (SQLException e) {
@@ -465,9 +473,13 @@ public class MyFakebookOracle extends FakebookOracle {
 			// Close statement and result set
 			if(rst != null) 
 				rst.close();
-			
-			if(getStmt != null)
-				getStmt.close();
+
+			if(createViewStmt != null)
+				createViewStmt.close();
+			if(getFinalStmt != null)
+				getFinalStmt.close();
+			if(dropViewStmt != null)
+				dropViewStmt.close();
 		}
 	}
 	
