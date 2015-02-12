@@ -575,14 +575,41 @@ public class MyFakebookOracle extends FakebookOracle {
 	//  
 	//
 	public void findPotentialSiblings() throws SQLException {
-		Long user1_id = 123L;
-		String user1FirstName = "Friend1FirstName";
-		String user1LastName = "Friend1LastName";
-		Long user2_id = 456L;
-		String user2FirstName = "Friend2FirstName";
-		String user2LastName = "Friend2LastName";
-		SiblingInfo s = new SiblingInfo(user1_id, user1FirstName, user1LastName, user2_id, user2FirstName, user2LastName);
-		this.siblings.add(s);
+		
+		
+		ResultSet rst = null; 
+		PreparedStatement getStmt = null;
+		try {
+			String getSQL = "SELECT a.user_id as user1_id, b.user_id AS user2_id, a.first_name, b.first_name, a.last_name FROM "+userTableName+" a, "+userTableName+" b WHERE a.last_name = b.last_name AND a.user_id <> b.user_id";
+			
+			getStmt = oracleConnection.prepareStatement(getSQL);
+			rst = getStmt.executeQuery();
+			
+			while(rst.next()){
+				Long user1_id = rst.getLong(1);
+				String user1FirstName = rst.getString(3);
+				String user1LastName = rst.getString(5);
+				Long user2_id = rst.getLong(2);
+				String user2FirstName = rst.getString(4);
+				String user2LastName = rst.getString(5);
+				SiblingInfo s = new SiblingInfo(user1_id, user1FirstName, user1LastName, user2_id, user2FirstName, user2LastName);
+				this.siblings.add(s);
+			}
+			
+		} 		
+		catch (SQLException e) {
+			System.err.println(e.getMessage());
+			// can do more things here
+			
+			throw e;		
+		} finally {
+			// Close statement and result set
+			if(rst != null) 
+				rst.close();
+
+			if(getStmt != null)
+				getStmt.close();
+		}
 	}
 	
 }
