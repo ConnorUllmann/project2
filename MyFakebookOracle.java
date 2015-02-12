@@ -176,8 +176,8 @@ public class MyFakebookOracle extends FakebookOracle {
 			String getNamesSql = "SELECT LAST_NAME FROM " + userTableName+ " ORDER BY LENGTH(LAST_NAME) desc";
 			getNamesStmt = oracleConnection.prepareStatement(getNamesSql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
 			rst = getNamesStmt.executeQuery();
-			int lenLong = 0;
-			int lenShort = 1000;
+			int lenLong = -3;
+			int lenShort = -3;
 			
 			while(rst.next()) {
 				String lastName = rst.getString(1);
@@ -253,9 +253,39 @@ public class MyFakebookOracle extends FakebookOracle {
 	// (I.e., current_city = hometown_city)
 	//	
 	public void liveAtHome() throws SQLException {
+		/*
 		this.liveAtHome.add(new UserInfo(11L, "Heather", "Hometowngirl"));
 		this.countLiveAtHome = 1;
+		*/
+		ResultSet rst = null; 
+		PreparedStatement getNamesStmt = null;
+		try {
+			String getNamesSql = "SELECT " + hometownCityTableName + ".USER_ID FROM " + hometownCityTableName+ " INNER JOIN " +
+					currentCityTableName + " ON " + hometownCityTableName + ".USER_ID = " + currentCityTableName + ".USER_ID AND " +
+						hometownCityTableName + ".HOMETOWN_CITY_ID = " + currentCityTableName + ".CURRENT_CITY_ID";
+			getNamesStmt = oracleConnection.prepareStatement(getNamesSql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			rst = getNamesStmt.executeQuery();
+			while(rst.next()){
+				this.liveAtHome.add(new UserInfo(rst.getLong(1), "hi", "k"));
+				this.countLiveAtHome++;
+			}
+			
+		} 		
+		catch (SQLException e) {
+			System.err.println(e.getMessage());
+			// can do more things here
+			
+			throw e;		
+		} finally {
+			// Close statement and result set
+			if(rst != null) 
+				rst.close();
+			
+			if(getNamesStmt != null)
+				getNamesStmt.close();
+		}
 	}
+	
 
 
 
