@@ -160,13 +160,74 @@ public class MyFakebookOracle extends FakebookOracle {
 	//
 	public void findNameInfo() throws SQLException { // Query1
         // Find the following information from your database and store the information as shown
-		this.longestLastNames.add("JohnJacobJingleheimerSchmidt");
+		/*this.longestLastNames.add("JohnJacobJingleheimerSchmidt");
 		this.shortestLastNames.add("Ng");
 		this.shortestLastNames.add("Fu");
 		this.shortestLastNames.add("Wu");
 		this.mostCommonLastNames.add("Wang");
 		this.mostCommonLastNames.add("Smith");
 		this.mostCommonLastNamesCount = 10;
+		this.mostCommonLastNamesCount = 10;*/
+		
+		ResultSet rst = null; 
+		PreparedStatement getNamesStmt = null;
+		PreparedStatement getCommonStmt = null;
+		try {
+			String getNamesSql = "SELECT LAST_NAME FROM " + userTableName+ " ORDER BY LENGTH(LAST_NAME) desc";
+			getNamesStmt = oracleConnection.prepareStatement(getNamesSql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			rst = getNamesStmt.executeQuery();
+			int lenLong = 0;
+			int lenShort = 1000;
+			
+			while(rst.next()) {
+				String lastName = rst.getString(1);
+				if(rst.isFirst()){
+					this.longestLastNames.add(lastName);
+					lenLong = lastName.length();
+				}
+				else if (lastName.length() == lenLong){
+					this.longestLastNames.add(lastName);
+				}
+			}
+			while(rst.previous()) {
+				String lastName = rst.getString(1);
+				if(rst.isLast()){
+					this.shortestLastNames.add(lastName);
+					lenShort = lastName.length();
+				}
+				else if (lastName.length() == lenShort){
+					this.shortestLastNames.add(lastName);
+				}
+			}
+			
+			
+			String getCommonSql = "SELECT LAST_NAME, COUNT(LAST_NAME)"
+					+ "AS NAMECOUNT FROM " + userTableName+ " GROUP BY LAST_NAME ORDER BY NAMECOUNT desc";
+			getCommonStmt = oracleConnection.prepareStatement(getCommonSql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			rst = getCommonStmt.executeQuery();
+			while(rst.next()) {
+				if(rst.isFirst()){
+					this.mostCommonLastNames.add(rst.getString(1));
+					this.mostCommonLastNamesCount = rst.getInt(2);
+				}
+			}
+
+		} catch (SQLException e) {
+			System.err.println(e.getMessage());
+			// can do more things here
+			
+			throw e;		
+		} finally {
+			// Close statement and result set
+			if(rst != null) 
+				rst.close();
+			
+			if(getNamesStmt != null)
+				getNamesStmt.close();
+			
+			if(getCommonStmt != null)
+				getCommonStmt.close();
+		}
 	}
 	
 	@Override
