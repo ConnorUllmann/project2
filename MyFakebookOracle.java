@@ -432,9 +432,43 @@ public class MyFakebookOracle extends FakebookOracle {
 	// events in that city.  If there is a tie, return the names of all of the (tied) cities.
 	//
 	public void findEventCities() throws SQLException {
-		this.eventCount = 12;
-		this.popularCityNames.add("Ann Arbor");
-		this.popularCityNames.add("Ypsilanti");
+		//this.eventCount = 12;
+		//this.popularCityNames.add("Ann Arbor");
+		//this.popularCityNames.add("Ypsilanti");
+		
+		ResultSet rst = null; 
+		PreparedStatement getStmt = null;
+		try {
+			String getSql = //"SELECT CITY_NAME FROM (SELECT COUNT(*) FROM cityTableName AS NumberOfEvents) ORDER BY NumberOfEvents DESC 1";
+				"SELECT c.CITY_ID, COUNT(e.EVENT_CITY_ID) AS NUM_EVENTS "+
+				"FROM "+eventTableName+" e, "+cityTableName+" c "+
+				"WHERE e.EVENT_CITY_ID = c.CITY_ID "+
+				"GROUP BY c.CITY_ID "+
+				"ORDER BY NUM_EVENTS DESC";
+			getStmt = oracleConnection.prepareStatement(getSql);
+			rst = getStmt.executeQuery();
+			int count = 0;
+			while(rst.next()){
+				//this.eventCount = rst.getInt(1);
+				this.popularCityNames.add(rst.getInt(1)+":"+rst.getInt(2));
+				count++;
+			}
+			this.eventCount = count;
+			
+		} 		
+		catch (SQLException e) {
+			System.err.println(e.getMessage());
+			// can do more things here
+			
+			throw e;		
+		} finally {
+			// Close statement and result set
+			if(rst != null) 
+				rst.close();
+			
+			if(getStmt != null)
+				getStmt.close();
+		}
 	}
 	
 	
