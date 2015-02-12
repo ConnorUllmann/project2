@@ -281,13 +281,14 @@ public class MyFakebookOracle extends FakebookOracle {
 		ResultSet rst = null; 
 		PreparedStatement getNamesStmt = null;
 		try {
-			String getNamesSql = "SELECT " + hometownCityTableName + ".USER_ID FROM " + hometownCityTableName+ " INNER JOIN " +
+			String getNamesSql = "SELECT a.USER_ID, a.FIRST_NAME, a.LAST_NAME FROM " + userTableName + " a INNER JOIN " + 
+					"(SELECT " + hometownCityTableName + ".USER_ID FROM " + hometownCityTableName+ " INNER JOIN " +
 					currentCityTableName + " ON " + hometownCityTableName + ".USER_ID = " + currentCityTableName + ".USER_ID AND " +
-						hometownCityTableName + ".HOMETOWN_CITY_ID = " + currentCityTableName + ".CURRENT_CITY_ID";
-			getNamesStmt = oracleConnection.prepareStatement(getNamesSql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+						hometownCityTableName + ".HOMETOWN_CITY_ID = " + currentCityTableName + ".CURRENT_CITY_ID) b ON a.USER_ID = b.USER_ID";
+			getNamesStmt = oracleConnection.prepareStatement(getNamesSql);
 			rst = getNamesStmt.executeQuery();
 			while(rst.next()){
-				this.liveAtHome.add(new UserInfo(rst.getLong(1), "hi", "k"));
+				this.liveAtHome.add(new UserInfo(rst.getLong(1), rst.getString(2), rst.getString(3)));
 				this.countLiveAtHome++;
 			}
 			
