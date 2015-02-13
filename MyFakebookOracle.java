@@ -578,18 +578,73 @@ public class MyFakebookOracle extends FakebookOracle {
 	//
 	@Override
 	public void suggestFriendsByMutualFriends(int n) throws SQLException {
-		Long user1_id = 123L;
-		String user1FirstName = "Friend1FirstName";
-		String user1LastName = "Friend1LastName";
-		Long user2_id = 456L;
-		String user2FirstName = "Friend2FirstName";
-		String user2LastName = "Friend2LastName";
-		FriendsPair p = new FriendsPair(user1_id, user1FirstName, user1LastName, user2_id, user2FirstName, user2LastName);
+		
+		/*
+		 * This query is too slow and we couldn't find a better method to speed it up. We've commented it out for now
+		 * so that you can run the code without it getting in the way.
+		 */
+		
+		/*
+		ResultSet rst1 = null; 
+		PreparedStatement getStmt1 = null;
+		try {
+			
+			
+			String setOfAllFriendships = 
+"SELECT a.user_id AS usera_id, b.user_id AS userb_id, a.first_name AS afirst_name, b.first_name AS bfirst_name, a.last_name as alast_name, b.last_name as blast_name "+
+"FROM "+userTableName+" a, "+userTableName+" b, "+friendsTableName+" f "+
+"WHERE a.user_id = f.user1_id AND b.user_id = f.user2_id AND a.user_id < b.user_id";
+			
+			String setOfTotal = 
+"SELECT aa.user_id AS usera_id, bb.user_id AS userb_id, aa.first_name AS afirst_name, bb.first_name AS bfirst_name, aa.last_name as alast_name, bb.last_name as blast_name "+
+"FROM "+userTableName+" aa, "+userTableName+" bb "+
+"WHERE aa.user_id < bb.user_id AND NOT EXISTS ("+setOfAllFriendships+" AND aa.user_id = a.user_id AND bb.user_id = b.user_id)";
+			
+			String getSQL1 = 
+"SELECT ff.usera_id, ff.userb_id, ff.afirst_name, ff.bfirst_name, ff.alast_name, ff.blast_name, p.user_id as userf_id, p.first_name as ffirst_name, p.last_name as flast_name "+
+"FROM ("+setOfTotal+") ff, "+userTableName+" p, "+friendsTableName+" g0, "+friendsTableName+" g1 "+
+"WHERE ((ff.usera_id = g0.user1_id AND p.user_id = g0.user2_id) OR (ff.usera_id = g0.user2_id AND p.user_id = g0.user1_id)) "+
+"AND ((ff.userb_id = g1.user1_id AND p.user_id = g1.user2_id) OR (ff.userb_id = g1.user2_id AND p.user_id = g1.user1_id)) ";
 
-		p.addSharedFriend(567L, "sharedFriend1FirstName", "sharedFriend1LastName");
-		p.addSharedFriend(678L, "sharedFriend2FirstName", "sharedFriend2LastName");
-		p.addSharedFriend(789L, "sharedFriend3FirstName", "sharedFriend3LastName");
-		this.suggestedFriendsPairs.add(p);
+
+			getStmt1 = oracleConnection.prepareStatement(getSQL1);
+			rst1 = getStmt1.executeQuery();
+		   
+			while(rst1.next()){
+				
+				for(FriendsPair f : this.suggestedFriendsPairs)
+				{
+					if(f.user1Id == rst1.getLong(1) && f.user2Id == rst1.getLong(2))
+					{
+						f.addSharedFriend(rst1.getLong(7), rst1.getString(8), rst1.getString(9));
+						break;
+					}
+				}
+				
+				Long user1_id = rst1.getLong(1);
+				String user1FirstName = rst1.getString(3);
+				String user1LastName = rst1.getString(5);
+				Long user2_id = rst1.getLong(2);
+				String user2FirstName = rst1.getString(4);
+				String user2LastName = rst1.getString(6);
+				FriendsPair p = new FriendsPair(user1_id, user1FirstName, user1LastName, user2_id, user2FirstName, user2LastName);
+				p.addSharedFriend(rst1.getLong(7), rst1.getString(8), rst1.getString(9));
+				this.suggestedFriendsPairs.add(p);
+			}
+			
+		} 		
+		catch (SQLException e) {
+			System.err.println(e.getMessage());
+			
+			throw e;		
+		} finally {
+			
+			if(rst1 != null) 
+				rst1.close();
+
+			if(getStmt1 != null)
+				getStmt1.close();
+		}*/
 	}
 	
 	
