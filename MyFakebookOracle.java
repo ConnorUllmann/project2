@@ -160,15 +160,7 @@ public class MyFakebookOracle extends FakebookOracle {
 	// (3) The most common last name, and the number of times it appears (if there is a tie, include all in result)
 	//
 	public void findNameInfo() throws SQLException { // Query1
-        // Find the following information from your database and store the information as shown
-		/*this.longestLastNames.add("JohnJacobJingleheimerSchmidt");
-		this.shortestLastNames.add("Ng");
-		this.shortestLastNames.add("Fu");
-		this.shortestLastNames.add("Wu");
-		this.mostCommonLastNames.add("Wang");
-		this.mostCommonLastNames.add("Smith");
-		this.mostCommonLastNamesCount = 10;
-		this.mostCommonLastNamesCount = 10;*/
+        
 		
 		ResultSet rst = null; 
 		PreparedStatement getNamesStmt = null;
@@ -240,9 +232,6 @@ public class MyFakebookOracle extends FakebookOracle {
 	// the constraint that user1_id < user2_id
 	//
 	public void popularFriends() throws SQLException {
-		// Find the following information from your database and store the information as shown 
-		/*this.popularFriends.add(new UserInfo(10L, "Billy", "SmellsFunny"));
-		this.popularFriends.add(new UserInfo(11L, "Jenny", "BadBreath"));*/
 		
 
 		ResultSet rst = null; 
@@ -291,10 +280,7 @@ public class MyFakebookOracle extends FakebookOracle {
 	// (I.e., current_city = hometown_city)
 	//	
 	public void liveAtHome() throws SQLException {
-		/*
-		this.liveAtHome.add(new UserInfo(11L, "Heather", "Hometowngirl"));
-		this.countLiveAtHome = 1;
-		*/
+		
 		ResultSet rst = null; 
 		PreparedStatement getNamesStmt = null;
 		try {
@@ -334,16 +320,7 @@ public class MyFakebookOracle extends FakebookOracle {
 	// If there are ties, choose the photo with the smaller numeric PhotoID first
 	// 
 	public void findPhotosWithMostTags(int n) throws SQLException { 
-		/*String photoId = "1234567";
-		String albumId = "123456789";
-		String albumName = "album1";
-		String photoCaption = "caption1";
-		String photoLink = "http://google.com";
-		PhotoInfo p = new PhotoInfo(photoId, albumId, albumName, photoCaption, photoLink);
-		TaggedPhotoInfo tp = new TaggedPhotoInfo(p);
-		tp.addTaggedUser(new UserInfo(12345L, "taggedUserFirstName1", "taggedUserLastName1"));
-		tp.addTaggedUser(new UserInfo(12345L, "taggedUserFirstName2", "taggedUserLastName2"));
-		this.photosWithMostTags.add(tp);*/
+		
 		ResultSet rst = null; 
 		ResultSet rst2 = null; 
 		PreparedStatement dropView = null;
@@ -438,28 +415,149 @@ public class MyFakebookOracle extends FakebookOracle {
 	// (iii) If there are still ties, choose the pair with the smaller user_id for the male
 	//
 	public void matchMaker(int n, int yearDiff) throws SQLException { 
-		Long girlUserId = 123L;
-		String girlFirstName = "girlFirstName";
-		String girlLastName = "girlLastName";
-		int girlYear = 1988;
-		Long boyUserId = 456L;
-		String boyFirstName = "boyFirstName";
-		String boyLastName = "boyLastName";
-		int boyYear = 1986;
-		MatchPair mp = new MatchPair(girlUserId, girlFirstName, girlLastName, 
-				girlYear, boyUserId, boyFirstName, boyLastName, boyYear);
-		String sharedPhotoId = "12345678";
-		String sharedPhotoAlbumId = "123456789";
-		String sharedPhotoAlbumName = "albumName";
-		String sharedPhotoCaption = "caption";
-		String sharedPhotoLink = "link";
-		mp.addSharedPhoto(new PhotoInfo(sharedPhotoId, sharedPhotoAlbumId, 
-				sharedPhotoAlbumName, sharedPhotoCaption, sharedPhotoLink));
-		this.bestMatches.add(mp);
+		
 		
 		ResultSet rst = null; 
-		PreparedStatement get = null;
+		ResultSet rst2 = null; 
+		ResultSet rst3 = null; 
+		PreparedStatement getYViewStmt = null;
+		PreparedStatement getFViewStmt = null;
+		PreparedStatement getPViewStmt = null;
+		PreparedStatement getCountStmt = null;
 		
+		PreparedStatement getFNameStmt = null;
+		PreparedStatement getMNameStmt = null;
+		PreparedStatement getPhotoStmt = null;
+		
+		PreparedStatement dropMViewStmt = null;
+		PreparedStatement dropYViewStmt = null;
+		PreparedStatement dropFViewStmt = null;
+		PreparedStatement dropPViewStmt = null;
+		try{
+			//YEARDIFF GAVE AN ERROR WHEN TRYING TO USE "?" AND PASS AS PARAMETER
+			String getYViewSql = "CREATE VIEW Comp AS SELECT DISTINCT f.user_id AS user1_id, m.user_id AS user2_id FROM " + userTableName + 
+					" f, " + userTableName + " m WHERE f.GENDER = 'female' AND m.GENDER = 'male' AND ((f.YEAR_OF_BIRTH "
+							+ "- m.YEAR_OF_BIRTH <= " + yearDiff + " AND f.YEAR_OF_BIRTH - m.YEAR_OF_BIRTH >= 0)"
+									+ " OR (m.YEAR_OF_BIRTH "
+							+ "- f.YEAR_OF_BIRTH <= " + yearDiff + " AND m.YEAR_OF_BIRTH - f.YEAR_OF_BIRTH >= 0))";
+			String getFViewSql = "CREATE VIEW Notf AS SELECT c.user1_id, c.user2_id FROM COMP c MINUS "
+					+ "(SELECT f.USER1_ID, f.USER2_ID FROM "+
+							friendsTableName+" f UNION ALL SELECT g.USER2_ID, g.USER1_ID FROM "+ friendsTableName + 
+							" g)";
+			
+			String getPViewSql = "CREATE VIEW TAGGED AS SELECT a.TAG_SUBJECT_ID AS first, b.TAG_SUBJECT_ID AS sec, a.TAG_PHOTO_ID"
+					+ " FROM  "
+					+ tagTableName + " a, " +tagTableName + " b WHERE a.TAG_PHOTO_ID = b.TAG_PHOTO_ID AND a.TAG_SUBJECT_ID !="
+							+ " b.TAG_SUBJECT_ID";
+			String getCountSql = "CREATE VIEW Match AS SELECT u.first, u.sec, u.TAG_PHOTO_ID, u.shared FROM "
+					+ "(SELECT h.first, h.sec, h.TAG_PHOTO_ID, COUNT(h.sec) AS shared FROM TAGGED h GROUP BY h.first, h.sec, h.TAG_PHOTO_ID) u "
+					+ "JOIN Notf n ON n.user1_id = u.first AND n.user2_id = u.sec ORDER BY u.shared, u.first, u.sec";
+			
+			String getFNameSql = "SELECT f.user_id, f.FIRST_NAME, f.LAST_NAME, f.YEAR_OF_BIRTH FROM MATCH q JOIN "
+					+ userTableName +
+					" f ON q.first = f.user_id";
+			String getMNameSql = "SELECT m.user_id, m.FIRST_NAME, m.LAST_NAME, m.YEAR_OF_BIRTH FROM MATCH q JOIN "
+					+ userTableName +
+					" m ON q.sec = m.user_id";
+			
+			String getPhotosSql = "SELECT DISTINCT PHOTO_ID, ALBUM_ID, ALBUM_NAME, PHOTO_CAPTION, PHOTO_LINK, shared FROM "
+					+ "(SELECT p.PHOTO_ID, p.ALBUM_ID, a.ALBUM_NAME, p.PHOTO_CAPTION, p.PHOTO_LINK, m.shared FROM " +
+					albumTableName + " a JOIN MATCH m JOIN " +
+					photoTableName + " p ON m.TAG_PHOTO_ID = p.PHOTO_ID "
+							+ "ON a.ALBUM_ID = p.ALBUM_ID ORDER BY m.first, m.sec)";
+			String dropYViewSql = "DROP VIEW Comp";
+			String dropFViewSql = "DROP VIEW Notf";
+			String dropPViewSql = "DROP VIEW TAGGED";
+			String dropMViewSql = "DROP VIEW Match";
+			getYViewStmt = oracleConnection.prepareStatement(getYViewSql);
+			getFViewStmt = oracleConnection.prepareStatement(getFViewSql);
+			getPViewStmt = oracleConnection.prepareStatement(getPViewSql);
+			getCountStmt = oracleConnection.prepareStatement(getCountSql);
+			
+			getFNameStmt = oracleConnection.prepareStatement(getFNameSql);
+			getMNameStmt = oracleConnection.prepareStatement(getMNameSql);
+			getPhotoStmt = oracleConnection.prepareStatement(getPhotosSql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			dropYViewStmt = oracleConnection.prepareStatement(dropYViewSql);
+			dropFViewStmt = oracleConnection.prepareStatement(dropFViewSql);
+			dropPViewStmt = oracleConnection.prepareStatement(dropPViewSql);
+			dropMViewStmt = oracleConnection.prepareStatement(dropMViewSql);
+			
+			rst = getYViewStmt.executeQuery();
+			rst = getFViewStmt.executeQuery();
+			rst = getPViewStmt.executeQuery();
+			rst = getCountStmt.executeQuery();
+			rst = getFNameStmt.executeQuery();
+			rst2 = getMNameStmt.executeQuery();
+			rst3 = getPhotoStmt.executeQuery();
+			int count = 0;
+			while(rst.next() && rst2.next() && count < n){
+				Long fid = rst.getLong(1);
+				String ffirst = rst.getString(2);
+				String flast = rst.getString(3);
+				int fbirth= rst.getInt(4);
+				Long mid = rst2.getLong(1);
+				String mfirst = rst2.getString(2);
+				String mlast = rst2.getString(3);
+				int mbirth= rst2.getInt(4);
+				MatchPair mp = new MatchPair(fid, ffirst, flast, 
+						fbirth, mid, mfirst, mlast, mbirth);
+				int c2 = 0;
+				while(rst3.next() && c2 < rst3.getInt(6)){
+				String sharedPhotoId = rst3.getString(1);
+				String sharedPhotoAlbumId = rst3.getString(2);
+				String sharedPhotoAlbumName = rst3.getString(3);
+				String sharedPhotoCaption = rst3.getString(4);
+				String sharedPhotoLink = rst3.getString(5);
+				mp.addSharedPhoto(new PhotoInfo(sharedPhotoId, sharedPhotoAlbumId, 
+						sharedPhotoAlbumName, sharedPhotoCaption, sharedPhotoLink));
+				c2++;
+				}
+				rst3.previous();
+				this.bestMatches.add(mp);
+				count ++;
+			}
+			rst = dropMViewStmt.executeQuery();
+			rst = dropYViewStmt.executeQuery();
+			rst = dropFViewStmt.executeQuery();
+			rst = dropPViewStmt.executeQuery();
+		}
+		
+		
+		catch (SQLException e) {
+			System.err.println(e.getMessage());
+			// can do more things here
+			
+			throw e;		
+		} finally {
+			// Close statement and result set
+			if(rst != null) 
+				rst.close();
+			
+			if(getYViewStmt != null)
+				getYViewStmt.close();
+			if(getFViewStmt != null)
+				getFViewStmt.close();
+			if(getPViewStmt != null)
+				getPViewStmt.close();
+			if(getCountStmt != null)
+				getCountStmt.close();
+			if(getFNameStmt != null)
+				getFNameStmt.close();
+			if(getMNameStmt != null)
+				getMNameStmt.close();
+			if(getPhotoStmt != null)
+				getPhotoStmt.close();
+			if(dropMViewStmt != null)
+				dropMViewStmt.close();
+			if(dropYViewStmt != null)
+				dropYViewStmt.close();
+			if(dropYViewStmt != null)
+				dropYViewStmt.close();
+			if(dropFViewStmt != null)
+				dropFViewStmt.close();
+			if(dropPViewStmt != null)
+				dropPViewStmt.close();
+		}
 		
 	}
 
@@ -504,9 +602,7 @@ public class MyFakebookOracle extends FakebookOracle {
 	// on the same day, then assume that the one with the larger user_id is older
 	//
 	public void findAgeInfo(Long user_id) throws SQLException {
-		/*
-		this.oldestFriend = new UserInfo(1L, "Oliver", "Oldham");
-		this.youngestFriend = new UserInfo(25L, "Yolanda", "Young");*/
+		
 		
 		ResultSet rst = null; 
 		PreparedStatement getNamesStmt = null;
